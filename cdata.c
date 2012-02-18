@@ -25,28 +25,32 @@ static int cdata_open(struct inode *inode, struct file *filp)
     return 0;
 }
 
-ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
+static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     loff_t *off)
 {
     int i;
     printk(KERN_INFO "CDATA: in write\n");
-    for(i=0;i<5000;i++)
-        ;
+    while(1) {
+        current->state = TASK_INTERRUPTIBLE;
+        schedule();
+    }
+    //for(i=0;i<5000;i++)
+    //    ;
     return 0;
 }
 
-int cdata_close(struct inode *inode, struct file *filp)
+static int cdata_close(struct inode *inode, struct file *filp)
 {
     return 0;
 }
 
-ssize_t cdata_read(struct file *filp, char *buf, size_t size,
+static ssize_t cdata_read(struct file *filp, char *buf, size_t size,
     loff_t *off)
 {
     return 0;
 }
 
-int cdata_ioctl(struct file *filp, int cmd, struct file_lock* lock)
+static int cdata_ioctl(struct file *filp, int cmd, struct file_lock* lock)
 {
     return 0;
 }
@@ -60,17 +64,25 @@ static struct file_operations cdata_fops = {
     ioctl: cdata_ioctl,
 };
 
-int cdata_init_module(void)
+static int cdata_init_module(void)
 {
+    unsigned long *fb;
+    int i;
+
     if (register_chrdev(121, "cdata", &cdata_fops) < 0) {
         printk(KERN_INFO "CDATA: can't register driver\n");
         return -1;
     }
     printk(KERN_INFO "CDATA: Init\n");
+    /// Try to write fb
+    fb=ioremap(0x33f00000, 320*240*4);
+    for(i=0;i<320*240;i++)
+        writel(0x00ff0000, fb++);
+
     return 0;
 }
 
-void cdata_cleanup_module(void)
+static void cdata_cleanup_module(void)
 {
     unregister_chrdev(121, "cdata");
 }
