@@ -16,8 +16,12 @@
 #include <asm/uaccess.h>
 #include "cdata_ioctl.h"
 
+#define BUF_SIZE 128
+
 struct cdata_t {
-    unsigned long *fb;
+    unsigned long* fb;
+    unsigned char* buf;
+    unsigned int   index;
 };
 
 static int cdata_open(struct inode *inode, struct file *filp)
@@ -33,18 +37,37 @@ static int cdata_open(struct inode *inode, struct file *filp)
 
     cdata= kmalloc(sizeof(struct cdata_t), GFP_KERNEL);
     cdata->fb = ioremap(0x33f00000, 320*240*4);
+    cdata->buf = kmalloc(BUF_SIZE, GFP_KERNEL);
+    cdata->index = 0;
     filp->private_data = (void*)cdata;
     return 0;
+}
+
+void flush_lcd(void *priv)
+{
+    struct cdata_t *cdata = (struct cdata *)priv;
+    unsigned char *fb;
+    unsigned char *pixel;
+    int index;
+    int i;
+
+    fb = cdata->fb;
+    index = cdata->index;
+
+    for (i = 0; i < index; i++)
+        writeb(pixel[i], fb++);
+
+    cdata->index = 0;
 }
 
 static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     loff_t *off)
 {
     int i;
-    char kbuf[4];
     struct cdata_t *cdata = (struct cdata*)filp->private_data;
-    unsigned long *fb;
-    unsigned int show = 0;
+    //unsigned long *fb;
+    unsigned char* pixel;
+    unsigned int index;
 
     printk(KERN_INFO "CDATA: in write\n");
 #if 0
@@ -53,18 +76,27 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
         schedule();
     }
 #endif
-    copy_from_user(kbuf, buf, 4);
 
     // lock
-    fb = cdata->fb;
+    //fb = cdata->fb;
+    index = cdata->index;
+    pixel = cdata->buf;
     // unlock
 
-    for(i=0; i<4; i++)
-        show = show | (kbuf[i] << i);
+     for (i = 0; i < size; i++) {
+        if (index >= BUF_SIZE) {
+            // buffer full handle
+             flush_lcd((void *)cdata); //Use void* to pass private data to avoid platform dependent issue.
+            //index = 0; // This is not a good concept. Use state method like follow.
+            index = cdata->index;
+        }
+        // fb[index] = buf[i]; // Big mistakes to access user space memory
+        copy_from_user(&pixel[index], &buf[i], 1);
+        index++;
+    }
 
-    writel(show, fb);
-    //for(i=0;i<5000;i++)
-    //    ;
+    cdata->index = index;
+
     return 0;
 }
 
