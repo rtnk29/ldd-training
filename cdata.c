@@ -15,6 +15,7 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include "cdata_ioctl.h"
+
 struct cdata_t {
     unsigned long *fb;
 };
@@ -55,8 +56,7 @@ static int cdata_close(struct inode *inode, struct file *filp)
     return 0;
 }
 
-static ssize_t cdata_read(struct file *filp, char *buf, size_t size,
-    loff_t *off)
+static ssize_t cdata_read(struct file *filp, char *buf, size_t size, loff_t *off)
 {
     return 0;
 }
@@ -73,12 +73,13 @@ unsigned int cmd, unsigned long arg)
         case CDATA_CLEAR:
             n = *((int*)arg); //FIXME: dirty
             printk(KERN_INFO "CDATA_CLEAR: %d pixel\n", n);
-            
+
+            // lock
             fb = cdata->fb;
+            // unlock
 
             for(i=0; i<n; i++)
                 writel(0x00ff0000, fb++);
-            break;
             break;
         default:
             break;
