@@ -12,11 +12,13 @@
 int main(void)
 {
     int fd;
-    int i= 10000;
-    //char buffer[100];
+    int i= 10000;    
+    char pix[4] = {0x00, 0xff, 0x00, 0xff};
+
     fd = open("/dev/cdata", O_RDWR);
     ioctl(fd, CDATA_CLEAR, &i);
-    //write(fd,buffer,10);
+    write(fd, pix, 4);
+    write(fd, pix, 4);
 
     close(fd);
 }
