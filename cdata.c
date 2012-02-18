@@ -17,11 +17,13 @@
 #include "cdata_ioctl.h"
 
 #define BUF_SIZE 128
+#define	LCD_SIZE	(320*240*4)
 
 struct cdata_t {
     unsigned long* fb;
     unsigned char* buf;
     unsigned int   index;
+    unsigned int   offset;
 };
 
 static int cdata_open(struct inode *inode, struct file *filp)
@@ -39,6 +41,7 @@ static int cdata_open(struct inode *inode, struct file *filp)
     cdata->fb = ioremap(0x33f00000, 320*240*4);
     cdata->buf = kmalloc(BUF_SIZE, GFP_KERNEL);
     cdata->index = 0;
+    cdata->offset = 0;
     filp->private_data = (void*)cdata;
     return 0;
 }
@@ -49,15 +52,23 @@ void flush_lcd(void *priv)
     unsigned char *fb;
     unsigned char *pixel;
     int index;
+    int offset;
     int i;
 
     fb = cdata->fb;
     index = cdata->index;
+    pixel = cdata->buf;
+    offset = cdata->offset;
 
-    for (i = 0; i < index; i++)
-        writeb(pixel[i], fb++);
+    for (i = 0; i < index; i++) {
+        writeb(pixel[i], fb+offset);
+        offset++;
+        if (offset >= LCD_SIZE)
+        offset = 0;
+    }
 
     cdata->index = 0;
+    cdata->offset = offset;
 }
 
 static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
@@ -69,7 +80,7 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     unsigned char* pixel;
     unsigned int index;
 
-    printk(KERN_INFO "CDATA: in write\n");
+    //printk(KERN_INFO "CDATA: in write\n");
 #if 0
     while(1) {
         current->state = TASK_INTERRUPTIBLE;
