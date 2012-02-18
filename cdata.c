@@ -14,6 +14,7 @@
 #include <linux/input.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
+#include "cdata_ioctl.h"
 
 static int cdata_open(struct inode *inode, struct file *filp)
 {
@@ -50,8 +51,20 @@ static ssize_t cdata_read(struct file *filp, char *buf, size_t size,
     return 0;
 }
 
-static int cdata_ioctl(struct file *filp, int cmd, struct file_lock* lock)
+static int cdata_ioctl(struct inode *inode, struct file *filp,
+unsigned int cmd, unsigned long arg)
 {
+    int n;
+
+    switch (cmd) {
+        case CDATA_CLEAR:
+            n = *((int*)arg); //FIXME: dirty
+            printk(KERN_INFO "CDATA_CLEAR: %d pixel\n", n);
+
+            break;
+        default:
+            break;
+    }
     return 0;
 }
 
@@ -74,11 +87,12 @@ static int cdata_init_module(void)
         return -1;
     }
     printk(KERN_INFO "CDATA: Init\n");
+#if 0
     /// Try to write fb
     fb=ioremap(0x33f00000, 320*240*4);
     for(i=0;i<320*240;i++)
         writel(0x00ff0000, fb++);
-
+#endif
     return 0;
 }
 
