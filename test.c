@@ -17,8 +17,8 @@ int main(void)
 
     fd = open("/dev/cdata", O_RDWR);
     ioctl(fd, CDATA_CLEAR, &i);
-    write(fd, pix, 4);
-    write(fd, pix, 4);
+    write(fd, pix, 4); // write 1 dot
+    write(fd, pix, 4); // write 1 dot
 
     close(fd);
 }
