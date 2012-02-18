@@ -41,11 +41,28 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     loff_t *off)
 {
     int i;
+    char kbuf[4];
+    struct cdata_t *cdata = (struct cdata*)filp->private_data;
+    unsigned long *fb;
+    unsigned int show = 0;
+
     printk(KERN_INFO "CDATA: in write\n");
+#if 0
     while(1) {
         current->state = TASK_INTERRUPTIBLE;
         schedule();
     }
+#endif
+    copy_from_user(kbuf, buf, 4);
+
+    // lock
+    fb = cdata->fb;
+    // unlock
+
+    for(i=0; i<4; i++)
+        show = show | (kbuf[i] << i);
+
+    writel(show, fb);
     //for(i=0;i<5000;i++)
     //    ;
     return 0;
