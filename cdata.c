@@ -102,6 +102,13 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
 
 static int cdata_close(struct inode *inode, struct file *filp)
 {
+    struct cdata_t *cdata = (struct cdata *)filp->private_data;
+
+    flush_lcd((void *)cdata);
+
+    kfree(cdata->buf);
+    kfree(cdata);
+
     return 0;
 }
 
@@ -120,15 +127,15 @@ unsigned int cmd, unsigned long arg)
 
     switch (cmd) {
         case CDATA_CLEAR:
-            n = *((int*)arg); //FIXME: dirty
+            n = *((int*)arg); //FIXME: need to modify to use copy_from_user
             printk(KERN_INFO "CDATA_CLEAR: %d pixel\n", n);
 
-            // lock
+            //FIXME: lock
             fb = cdata->fb;
-            // unlock
+            //FIXME unlock
 
             for(i=0; i<n; i++)
-                writel(0x00ff0000, fb++);
+                writel(0x00ff00ff, fb++); //clear to pink
             break;
         default:
             break;
@@ -155,11 +162,11 @@ static int cdata_init_module(void)
         return -1;
     }
     printk(KERN_INFO "CDATA: Init\n");
-#if 0
+#if 1
     /// Try to write fb
     fb=ioremap(0x33f00000, 320*240*4);
     for(i=0;i<320*240;i++)
-        writel(0x00ff0000, fb++);
+        writel(0x00ff0000, fb++); //RED
 #endif
     return 0;
 }
