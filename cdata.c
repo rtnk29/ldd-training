@@ -54,6 +54,7 @@ void flush_lcd(void *priv)
     int index;
     int offset;
     int i;
+    int j;
 
     fb = cdata->fb;
     index = cdata->index;
@@ -62,9 +63,10 @@ void flush_lcd(void *priv)
 
     for (i = 0; i < index; i++) {
         writeb(pixel[i], fb+offset);
+        for(j=0;j<1000000;j++); // in order to emulate a low speed IO
         offset++;
         if (offset >= LCD_SIZE)
-        offset = 0;
+            offset = 0;
     }
 
     cdata->index = 0;
