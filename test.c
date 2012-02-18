@@ -7,12 +7,16 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include "cdata_ioctl.h"
 
 int main(void)
 {
     int fd;
-    char buffer[100];
+    int i= 10000;
+    //char buffer[100];
     fd = open("/dev/cdata", O_RDWR);
-    write(fd,buffer,10);
+    ioctl(fd, CDATA_CLEAR, &i);
+    //write(fd,buffer,10);
+
     close(fd);
 }
