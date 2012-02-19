@@ -67,10 +67,11 @@ void flush_lcd(unsigned long priv)
 
     for (i = 0; i < index; i++) {
         writeb(pixel[i], fb+offset);
-        for(j=0;j<1000000;j++); // in order to emulate a low speed IO
+        
         offset++;
         if (offset >= LCD_SIZE)
             offset = 0;
+        for(j=0;j<1000000;j++); // in order to emulate a low speed IO
     }
 
     cdata->index = 0;
@@ -113,11 +114,13 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
             timer->expires = jiffies + 1*HZ;
             timer->function = flush_lcd;
             timer->data = (unsigned long)cdata; 
-
-            flush_lcd((void *)cdata); //Use void* to pass private data to avoid platform dependent issue.
-            //index = 0; // This is not a good concept. Use state method like follow.
+            
+            add_timer(timer);
             //index = cdata->index;
             // FIXME: Process scheduling
+            current->state = TASK_INTERRUPTIBLE;
+            schedule();
+
             index = cdata->index; // Read back after process scheduling.
         }
         // fb[index] = buf[i]; // Big mistakes to access user space memory
@@ -135,7 +138,7 @@ static int cdata_close(struct inode *inode, struct file *filp)
     struct cdata_t *cdata = (struct cdata *)filp->private_data;
 
     flush_lcd((void *)cdata);
-
+    del_timer(&cdata->flush_timer);
     kfree(cdata->buf);
     kfree(cdata);
 
