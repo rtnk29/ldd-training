@@ -25,6 +25,7 @@ struct cdata_t {
     unsigned int   index;
     unsigned int   offset;
     struct timer_list	flush_timer;
+    struct timer_list	sched_timer;
 };
 
 static int cdata_open(struct inode *inode, struct file *filp)
@@ -45,6 +46,7 @@ static int cdata_open(struct inode *inode, struct file *filp)
     cdata->offset = 0;
 
     init_timer(&cdata->flush_timer);
+    init_timer(&cdata->sched_timer);
 
     filp->private_data = (void*)cdata;
     return 0;
@@ -81,6 +83,14 @@ void flush_lcd(unsigned long priv)
 void cdata_wake_up()
 {
     // FIXME: Wake up process
+    struct cdata_t *cdata = (struct cdata *)filp->private_data;
+    struct timer_list *sched;
+
+    current->state = TASK_RUNNING;
+    schedule();
+
+    sched->expire = jiffies + 10;
+    add_timer(sched);
 }
 
 static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
@@ -106,22 +116,32 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     index = cdata->index;
     pixel = cdata->buf;
     timer = cdata->flush_timer;
+    sched = &cdata->sched_timer;
     // unlock
 
      for (i = 0; i < size; i++) {
         if (index >= BUF_SIZE) {
             // buffer full handle
-            timer->expires = jiffies + 1*HZ;
+            cdata->index = index;
+            timer->expires = jiffies + 5*HZ;
             timer->function = flush_lcd;
-            timer->data = (unsigned long)cdata; 
-            
+            timer->data = (unsigned long)cdata;
             add_timer(timer);
-            //index = cdata->index;
-            // FIXME: Process scheduling
-            current->state = TASK_INTERRUPTIBLE;
-            schedule();
 
-            index = cdata->index; // Read back after process scheduling.
+            sched->expire = jiffies + 10;
+            sched->function = cdata_wake_up;
+            sched->data = (unsigned long)cdata;
+            add_timer(sched);
+
+repeat:
+            // FIXME: Process scheduling
+           current->state = TASK_INTERRUPTIBLE;
+           schedule();
+ 
+           index = cdata->index;
+
+           if (index != 0)
+               goto repeat;
         }
         // fb[index] = buf[i]; // Big mistakes to access user space memory
         copy_from_user(&pixel[index], &buf[i], 1);
@@ -139,6 +159,7 @@ static int cdata_close(struct inode *inode, struct file *filp)
 
     flush_lcd((void *)cdata);
     del_timer(&cdata->flush_timer);
+    del_timer(&cdata->sched_timer);
     kfree(cdata->buf);
     kfree(cdata);
 
