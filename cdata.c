@@ -77,17 +77,16 @@ void flush_lcd(unsigned long priv)
         offset++;
         if (offset >= LCD_SIZE)
             offset = 0;
-        for(j=0;j<1000000;j++); // in order to emulate a low speed IO
+        for(j=0;j<100000;j++); // in order to emulate a low speed IO
     }
 
     cdata->index = 0;
     cdata->offset = offset;
 }
 
-void cdata_wake_up()
-{
-    // FIXME: Wake up process
-    struct cdata_t *cdata = (struct cdata *)filp->private_data;
+void cdata_wake_up(unsigned long priv)
+{	
+    struct cdata_t *cdata = (struct cdata *)priv;
     struct timer_list *sched;
     wait_queue_head_t	*wq;
 
@@ -96,7 +95,7 @@ void cdata_wake_up()
 
     wake_up(wq);
 
-    sched->expire = jiffies + 10;
+    sched->expires = jiffies + 10;
     add_timer(sched);
 }
 
@@ -107,6 +106,7 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     struct cdata_t *cdata = (struct cdata*)filp->private_data;
     //unsigned long *fb;
     struct timer_list *timer;
+    struct timer_list *sched;
     unsigned char* pixel;
     unsigned int index;
     wait_queue_head_t *wq;
@@ -124,7 +124,7 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     //fb = cdata->fb;
     index = cdata->index;
     pixel = cdata->buf;
-    timer = cdata->flush_timer;
+    timer = &cdata->flush_timer;
     sched = &cdata->sched_timer;
     wq = &cdata->wq;
     // unlock
@@ -138,7 +138,7 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
             timer->data = (unsigned long)cdata;
             add_timer(timer);
 
-            sched->expire = jiffies + 10;
+            sched->expires = jiffies + 10;
             sched->function = cdata_wake_up;
             sched->data = (unsigned long)cdata;
             add_timer(sched);
