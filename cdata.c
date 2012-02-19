@@ -73,6 +73,11 @@ void flush_lcd(void *priv)
     cdata->offset = offset;
 }
 
+void cdata_wake_up()
+{
+    // FIXME: Wake up process
+}
+
 static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     loff_t *off)
 {
@@ -99,9 +104,11 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
      for (i = 0; i < size; i++) {
         if (index >= BUF_SIZE) {
             // buffer full handle
-             flush_lcd((void *)cdata); //Use void* to pass private data to avoid platform dependent issue.
+            // FIXME: Kernel scheduling 
+            flush_lcd((void *)cdata); //Use void* to pass private data to avoid platform dependent issue.
             //index = 0; // This is not a good concept. Use state method like follow.
             index = cdata->index;
+            // FIXME: Process scheduling
         }
         // fb[index] = buf[i]; // Big mistakes to access user space memory
         copy_from_user(&pixel[index], &buf[i], 1);
