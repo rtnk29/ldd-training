@@ -26,6 +26,8 @@ struct cdata_t {
     unsigned int   offset;
     struct timer_list	flush_timer;
     struct timer_list	sched_timer;
+
+    wait_queue_head_t	wq;
 };
 
 static int cdata_open(struct inode *inode, struct file *filp)
@@ -47,6 +49,8 @@ static int cdata_open(struct inode *inode, struct file *filp)
 
     init_timer(&cdata->flush_timer);
     init_timer(&cdata->sched_timer);
+
+    init_waitqueue_head(&cdata->wq);
 
     filp->private_data = (void*)cdata;
     return 0;
@@ -85,9 +89,12 @@ void cdata_wake_up()
     // FIXME: Wake up process
     struct cdata_t *cdata = (struct cdata *)filp->private_data;
     struct timer_list *sched;
+    wait_queue_head_t	*wq;
 
-    current->state = TASK_RUNNING;
-    schedule();
+    sched = &cdata->sched_timer;
+    wq = &cdata->wq;
+
+    wake_up(wq);
 
     sched->expire = jiffies + 10;
     add_timer(sched);
@@ -102,6 +109,8 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     struct timer_list *timer;
     unsigned char* pixel;
     unsigned int index;
+    wait_queue_head_t *wq;
+    wait_queue_t wait;
 
     //printk(KERN_INFO "CDATA: in write\n");
 #if 0
@@ -117,6 +126,7 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
     pixel = cdata->buf;
     timer = cdata->flush_timer;
     sched = &cdata->sched_timer;
+    wq = &cdata->wq;
     // unlock
 
      for (i = 0; i < size; i++) {
@@ -133,8 +143,10 @@ static ssize_t cdata_write(struct file *filp, const char *buf, size_t size,
             sched->data = (unsigned long)cdata;
             add_timer(sched);
 
+            wait.flags = 0;
+            wait.task = current;
+            add_wait_queue(wq, &wait);
 repeat:
-            // FIXME: Process scheduling
            current->state = TASK_INTERRUPTIBLE;
            schedule();
  
@@ -142,6 +154,9 @@ repeat:
 
            if (index != 0)
                goto repeat;
+
+           remove_wait_queue(wq, &wait);
+           del_timer(sched);
         }
         // fb[index] = buf[i]; // Big mistakes to access user space memory
         copy_from_user(&pixel[index], &buf[i], 1);
@@ -159,7 +174,7 @@ static int cdata_close(struct inode *inode, struct file *filp)
 
     flush_lcd((void *)cdata);
     del_timer(&cdata->flush_timer);
-    del_timer(&cdata->sched_timer);
+
     kfree(cdata->buf);
     kfree(cdata);
 
