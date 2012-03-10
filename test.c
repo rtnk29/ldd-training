@@ -15,6 +15,7 @@ int main(void)
     int i= 10000;    
     char pix[4] = {0x00, 0xff, 0x00, 0xff};
     char pix2[4] = {0xff, 0xff, 0xff, 0xff};
+    char* fb;
     //pid_t pid;
 
     //pid=fork();
@@ -32,7 +33,12 @@ int main(void)
         }        
     }
 */
-    mmap(0, 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    fb = (char*)mmap(0, 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+
+    for(i=0; i< 1024; i++) {
+        fb[i] = 0xff;
+    }
+
     sleep(15);
     close(fd);
 }
