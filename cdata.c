@@ -215,8 +215,20 @@ unsigned int cmd, unsigned long arg)
 
 int cdata_mmap(struct file* filp, struct vm_area_struct *vma)
 {
+    unsigned long from;
+    unsigned long to;
+    unsigned long size;
+
+    from = vma->vm_start;
+    to = 0x33f00000;
+    size = vma->vm_end - vma->vm_start;
+    
+    remap_page_range(from, to, size, PAGE_SHARED);
+
     printk(KERN_INFO "CDATA vm start: %08x\n", vma->vm_start);
     printk(KERN_INFO "CDATA vm end: %08x\n", vma->vm_end);
+
+    return 0;
 }
 
 static struct file_operations cdata_fops = {
