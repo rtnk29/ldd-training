@@ -197,6 +197,7 @@ unsigned int cmd, unsigned long arg)
     switch (cmd) {
         case CDATA_CLEAR:
             n = *((int*)arg); //FIXME: need to modify to use copy_from_user
+            //get_user(n, arg);
             printk(KERN_INFO "CDATA_CLEAR: %d pixel\n", n);
 
             //FIXME: lock
@@ -207,9 +208,15 @@ unsigned int cmd, unsigned long arg)
                 writel(0x00ff00ff, fb++); //clear to pink
             break;
         default:
-            break;
+            return -ENOTTY;
     }
     return 0;
+}
+
+int cdata_mmap(struct file* filp, struct vm_area_struct *vma)
+{
+    printk(KERN_INFO "CDATA vm start: %08x\n", vma->vm_start);
+    printk(KERN_INFO "CDATA vm end: %08x\n", vma->vm_end);
 }
 
 static struct file_operations cdata_fops = {
@@ -219,6 +226,7 @@ static struct file_operations cdata_fops = {
     write: cdata_write,
     read: cdata_read,
     ioctl: cdata_ioctl,
+    mmap: cdata_mmap,
 };
 
 static int cdata_init_module(void)
