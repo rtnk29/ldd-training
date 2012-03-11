@@ -19,9 +19,20 @@
 
 #define CDATA_TS_MINOR 50 // FIXME: define in miscdevice.h
 
+void cdata_bh(unsigned long);
+DECLARE_TASKLET(my_tasklet,  cdata_bh, NULL);
+
 void cdata_ts_handler(int irq, void* priv, struct pt_reg* reg)
 {
-     printk(KERN_INFO "TS interrupt\n");
+    printk(KERN_INFO "TS TOP interrupt\n");
+    //while(1); --> HANG
+    tasklet_schedule(&my_tasklet);
+}
+
+void cdata_bh(unsigned long priv)
+{
+    printk(KERN_INFO "TS BH \n");
+    while(1); // ----> only TOP interrupt allow
 }
 
 static int cdata_ts_open(struct inode *inode, struct file *filp)
