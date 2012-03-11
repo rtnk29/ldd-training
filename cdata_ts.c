@@ -22,6 +22,8 @@
 void cdata_bh(unsigned long);
 DECLARE_TASKLET(my_tasklet,  cdata_bh, NULL);
 
+struct input_dev ts_input;
+
 void cdata_ts_handler(int irq, void* priv, struct pt_reg* reg)
 {
     printk(KERN_INFO "TS TOP interrupt\n");
@@ -34,6 +36,14 @@ void cdata_bh(unsigned long priv)
 {
     printk(KERN_INFO "TS BH \n");
     //while(1); // ----> only TOP interrupt allow
+}
+
+static int input_dev_open(struct input_dev* dev)
+{
+}
+
+static int input_dev_close(struct input_dev* dev)
+{
 }
 
 static int cdata_ts_open(struct inode *inode, struct file *filp)
@@ -55,6 +65,13 @@ static int cdata_ts_open(struct inode *inode, struct file *filp)
         printk(KERN_INFO "request irq failed\n");
         return -1;
     }
+    
+    /** handling input device ***/
+    ts_input.open = input_dev_open;
+    ts_input.close = input_dev_close;
+
+    input_register_device(&ts_input);
+
     printk(KERN_INFO "GPGCON: %08x\n", reg);
 
     return 0;
@@ -98,6 +115,7 @@ static struct miscdevice cdata_ts_misc = {
     fops:  &cdata_ts_fops,
 };
 
+
 static int cdata_ts_init_module(void)
 {
     unsigned long *fb;
@@ -114,7 +132,6 @@ static int cdata_ts_init_module(void)
 
 static void cdata_ts_cleanup_module(void)
 {
-    unregister_chrdev(121, "cdata");
 }
 
 module_init(cdata_ts_init_module);
