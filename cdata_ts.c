@@ -26,13 +26,14 @@ void cdata_ts_handler(int irq, void* priv, struct pt_reg* reg)
 {
     printk(KERN_INFO "TS TOP interrupt\n");
     //while(1); --> HANG
+    //FIXME: read (x,y) from ADC
     tasklet_schedule(&my_tasklet);
 }
 
 void cdata_bh(unsigned long priv)
 {
     printk(KERN_INFO "TS BH \n");
-    while(1); // ----> only TOP interrupt allow
+    //while(1); // ----> only TOP interrupt allow
 }
 
 static int cdata_ts_open(struct inode *inode, struct file *filp)
